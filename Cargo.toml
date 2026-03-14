@@ -1,0 +1,62 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/alpaca-client",
+    "crates/trading",
+    "crates/config",
+    "crates/options-wheel",
+    ".",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Nonthok <team@nonthok.com>"]
+license = "MIT"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# HTTP client
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+
+# WebSocket
+tokio-tungstenite = { version = "0.23", features = ["rustls-tls-webpki-roots"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Error handling
+anyhow = "1"
+thiserror = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# Config
+config = "0.14"
+dotenvy = "0.15"
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Async streams
+futures-util = "0.3"
+async-trait = "0.1"
+
+[[bin]]
+name = "nonthok-cashflow"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+dotenvy = { workspace = true }
+alpaca-client = { path = "crates/alpaca-client" }
+trading = { path = "crates/trading" }
+config-crate = { path = "crates/config", package = "config-crate" }
