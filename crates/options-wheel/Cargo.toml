@@ -19,3 +19,6 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 dotenvy = { workspace = true }
 alpaca-client = { path = "../alpaca-client" }
+
+[dev-dependencies]
+tokio = { workspace = true }

@@ -4,7 +4,7 @@ use serde_json::Value;
 use tracing::{debug, instrument};
 
 use crate::error::{AlpacaError, Result};
-use crate::models::{Account, Order, OrderRequest, Position, StockQuotesResponse, UnderlyingQuote};
+use crate::models::{Account, Order, OrderRequest, OptionsSnapshotsResponse, Position, StockQuotesResponse, UnderlyingQuote};
 
 /// Alpaca paper-trading REST API base URL (v2)
 const PAPER_BASE_URL: &str = "https://paper-api.alpaca.markets/v2";
@@ -214,6 +214,74 @@ impl AlpacaRestClient {
         if let Some(l) = limit {
             req = req.query(&[("limit", l.to_string())]);
         }
+        let resp = self.auth_headers(req).send().await?;
+        self.handle_response(resp).await
+    }
+
+    // ─── Options Snapshots (v1beta1) ──────────────────────────────────────────
+
+    /// Fetch option contract snapshots for an underlying symbol.
+    ///
+    /// Paginates automatically until all contracts are returned.
+    #[instrument(skip(self), name = "get_options_snapshots")]
+    pub async fn get_options_snapshots(
+        &self,
+        underlying: &str,
+        contract_type: &str,
+        expiration_date_gte: &str,
+        expiration_date_lte: &str,
+        feed: &str,
+    ) -> Result<OptionsSnapshotsResponse> {
+        let url = format!(
+            "{}/options/snapshots/{}",
+            self.data_base_url_beta, underlying
+        );
+
+        let mut all_snapshots = std::collections::HashMap::new();
+        let mut page_token: Option<String> = None;
+
+        loop {
+            let mut req = self
+                .http
+                .get(&url)
+                .query(&[
+                    ("type", contract_type),
+                    ("expiration_date_gte", expiration_date_gte),
+                    ("expiration_date_lte", expiration_date_lte),
+                    ("feed", feed),
+                    ("limit", "1000"),
+                ]);
+
+            if let Some(ref token) = page_token {
+                req = req.query(&[("page_token", token.as_str())]);
+            }
+
+            let resp = self.auth_headers(req).send().await?;
+            let page: OptionsSnapshotsResponse = self.handle_response(resp).await?;
+
+            all_snapshots.extend(page.snapshots);
+            page_token = page.next_page_token;
+
+            if page_token.is_none() {
+                break;
+            }
+        }
+
+        Ok(OptionsSnapshotsResponse {
+            snapshots: all_snapshots,
+            next_page_token: None,
+        })
+    }
+
+    // ─── Account Activities ───────────────────────────────────────────────────
+
+    /// Fetch account activities filtered by activity type(s).
+    #[instrument(skip(self), name = "get_account_activities")]
+    pub async fn get_account_activities(&self, activity_types: &str) -> Result<serde_json::Value> {
+        let req = self
+            .http
+            .get(format!("{}/account/activities", self.trading_base_url))
+            .query(&[("activity_types", activity_types)]);
         let resp = self.auth_headers(req).send().await?;
         self.handle_response(resp).await
     }

@@ -5,7 +5,8 @@ pub mod ws;
 
 pub use error::{AlpacaError, Result};
 pub use models::{
-    Account, Bar, Order, OrderRequest, OrderSide, OrderStatus, OrderType, Position, Quote,
+    Account, Bar, OptionGreeks, OptionQuote, OptionSnapshot, OptionTrade, OptionsSnapshotsResponse,
+    Order, OrderRequest, OrderSide, OrderStatus, OrderType, Position, Quote,
     StockQuote, StockQuotesResponse, TimeInForce, Trade, UnderlyingQuote, WsAuth, WsMessage,
     WsSubscribe,
 };

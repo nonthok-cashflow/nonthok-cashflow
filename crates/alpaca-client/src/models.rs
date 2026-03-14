@@ -228,6 +228,52 @@ pub struct Quote {
     pub z: String,
 }
 
+// ─── Options Snapshots ────────────────────────────────────────────────────────
+
+/// Greeks for an option contract.
+#[derive(Debug, Clone, Deserialize)]
+pub struct OptionGreeks {
+    pub delta: Option<f64>,
+    pub gamma: Option<f64>,
+    pub theta: Option<f64>,
+    pub vega: Option<f64>,
+    pub rho: Option<f64>,
+}
+
+/// Latest quote for an option contract.
+#[derive(Debug, Clone, Deserialize)]
+pub struct OptionQuote {
+    /// Ask price
+    pub ap: Option<f64>,
+    /// Bid price
+    pub bp: Option<f64>,
+}
+
+/// Latest trade for an option contract.
+#[derive(Debug, Clone, Deserialize)]
+pub struct OptionTrade {
+    /// Last trade price
+    pub p: Option<f64>,
+}
+
+/// Snapshot of a single option contract.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OptionSnapshot {
+    pub greeks: Option<OptionGreeks>,
+    pub implied_volatility: Option<f64>,
+    pub latest_quote: Option<OptionQuote>,
+    pub latest_trade: Option<OptionTrade>,
+    pub open_interest: Option<f64>,
+}
+
+/// Response wrapper for the options snapshots endpoint.
+#[derive(Debug, Clone, Deserialize)]
+pub struct OptionsSnapshotsResponse {
+    pub snapshots: std::collections::HashMap<String, OptionSnapshot>,
+    pub next_page_token: Option<String>,
+}
+
 // ─── WebSocket Messages ───────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Deserialize)]

@@ -50,10 +50,7 @@ async fn main() -> Result<()> {
 
     // ── Effective buying power (capped by config) ────────────────────────────
     let effective_bp = account_state.options_buying_power.min(cfg.max_buying_power);
-    info!(
-        effective_buying_power = effective_bp,
-        "Effective buying power (min of account vs MAX_BUYING_POWER)"
-    );
+    info!(effective_buying_power = effective_bp, "Effective buying power");
 
     // ── Underlying mid-price ─────────────────────────────────────────────────
     let quote = account::fetch_underlying_quote(&client, &cfg.underlying).await?;
@@ -66,14 +63,29 @@ async fn main() -> Result<()> {
         "Underlying price fetched"
     );
 
-    println!("\n=== Options Wheel — Scaffold Ready ===");
+    println!("\n=== Options Wheel — Phase 1 ===");
     println!("Underlying:         {} @ ${:.2} mid", cfg.underlying, quote.mid);
     println!("Options BP:         ${:.2}", account_state.options_buying_power);
     println!("Effective BP cap:   ${:.2}", effective_bp);
     println!("Approval level:     {}", account_state.options_approved_level);
     println!("DTE window:         {}-{} days", cfg.target_dte_min, cfg.target_dte_max);
-    println!("=======================================");
-    println!("Next: implement chain.rs (TNA-12) to fetch BAC options and select a strike.");
+    println!("================================");
+
+    // ── Load persisted state ─────────────────────────────────────────────────
+    let state = wheel::load_state();
+    info!("[WHEEL] Loaded state: {:?}", state);
+    println!("Current state:      {:?}", state);
+
+    // ── Advance state machine ────────────────────────────────────────────────
+    let new_state = wheel::step(state, &client, &cfg).await?;
+    info!("[WHEEL] New state: {:?}", new_state);
+    println!("New state:          {:?}", new_state);
+
+    // ── Persist new state ────────────────────────────────────────────────────
+    wheel::save_state(&new_state)?;
+
+    println!("================================");
+    println!("Step complete. Run again to advance the wheel.");
 
     Ok(())
 }
