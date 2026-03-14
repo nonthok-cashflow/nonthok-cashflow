@@ -1,9 +1,3 @@
-[package]
-name = "nonthok-cashflow"
-version.workspace = true
-edition.workspace = true
-authors.workspace = true
-
 [workspace]
 resolver = "2"
 members = [
