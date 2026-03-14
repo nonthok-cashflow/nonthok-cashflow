@@ -1,0 +1,16 @@
+# Example config.toml (copy to config.toml and fill in values).
+# Environment variables (APP__*) take precedence over this file.
+
+[alpaca]
+api_key    = "your_paper_api_key"
+api_secret = "your_paper_api_secret"
+paper      = true   # ALWAYS start with true
+
+[trading]
+max_order_size_usd  = 1000.0
+max_open_positions  = 5
+risk_per_trade_pct  = 0.01
+watchlist           = ["SPY", "QQQ", "AAPL"]
+
+[logging]
+level = "info"
