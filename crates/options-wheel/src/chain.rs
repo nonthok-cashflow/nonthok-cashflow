@@ -265,7 +265,7 @@ mod tests {
         let expiration_date = NaiveDate::parse_from_str(expiration, "%Y-%m-%d").unwrap();
         let mid = (bid + ask) / 2.0;
         OptionContract {
-            symbol: format!("BAC{}", expiration.replace('-', "")[2..]),
+            symbol: format!("BAC{}", &expiration.replace('-', "")[2..]),
             expiration_date,
             strike_price: 38.0,
             contract_type: "put".to_string(),

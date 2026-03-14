@@ -8,6 +8,7 @@ use alpaca_client::AlpacaRestClient;
 
 use crate::chain::{fetch_call_chain, fetch_put_chain, select_cc_strike, select_csp_strike};
 use crate::config::WheelConfig;
+use crate::iv_history;
 use crate::orders::{place_buy_to_close, place_cc_order, place_csp_order};
 use crate::positions::{detect_wheel_event, get_position_summary, log_all_positions, WheelEvent};
 
@@ -82,7 +83,64 @@ pub async fn step(
 
     match state {
         WheelState::Idle => {
-            info!("[WHEEL] State: Idle — fetching options chain");
+            info!("[WHEEL] State: Idle — checking IV gate");
+
+            // ── IV gate (before delta/OI/spread filters) ──────────────────
+            let today = chrono::Local::now().date_naive();
+            let iv_conn = match iv_history::open_db() {
+                Ok(c) => c,
+                Err(e) => {
+                    tracing::warn!("[IV] Failed to open iv_history DB: {e}, skipping gate");
+                    // Fall through to CSP entry if DB unavailable
+                    return {
+                        let chain = fetch_put_chain(
+                            &cfg.underlying,
+                            client,
+                            cfg.target_dte_min,
+                            cfg.target_dte_max,
+                        )
+                        .await?;
+                        let contract = select_csp_strike(&chain)?;
+                        info!(
+                            "[WHEEL] Idle -> WatchingCSP: {}, delta={:.2}, premium=${:.2}",
+                            contract.symbol, contract.delta, contract.mid
+                        );
+                        let result =
+                            place_csp_order(client, &contract.symbol, contract.strike_price, contract.mid)
+                                .await?;
+                        info!(
+                            "[ORDER] SELL PUT {} x1 @ ${:.2} LIMIT -> filled @ ${:.2}",
+                            contract.symbol, contract.mid, result.filled_price
+                        );
+                        Ok(WheelState::WatchingCSP {
+                            order_id: result.order_id,
+                            symbol: contract.symbol.clone(),
+                        })
+                    };
+                }
+            };
+
+            let iv_favorable = iv_history::capture_and_check_iv(
+                &iv_conn,
+                &cfg.underlying,
+                today,
+                client,
+            )
+            .await
+            .unwrap_or_else(|e| {
+                tracing::warn!("[IV] IV gate check failed: {e}, defaulting to favorable");
+                true
+            });
+
+            if !iv_favorable {
+                info!(
+                    "[WHEEL] Idle: IV gate FAILED for {} — skipping CSP entry today",
+                    cfg.underlying
+                );
+                return Ok(WheelState::Idle);
+            }
+
+            info!("[WHEEL] IV gate PASSED for {} — fetching options chain", cfg.underlying);
 
             let chain = fetch_put_chain(&cfg.underlying, client, cfg.target_dte_min, cfg.target_dte_max).await?;
             let contract = select_csp_strike(&chain)?;
