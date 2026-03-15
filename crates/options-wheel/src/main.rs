@@ -3,7 +3,9 @@ mod chain;
 mod config;
 mod iv_history;
 mod orders;
+mod performance;
 mod positions;
+mod report;
 mod wheel;
 
 use anyhow::Result;
@@ -13,6 +15,12 @@ use alpaca_client::AlpacaRestClient;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // ── --report flag: print performance summary and exit ────────────────────
+    let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|a| a == "--report") {
+        return report::print_report();
+    }
+
     // ── Load config ──────────────────────────────────────────────────────────
     let cfg = config::WheelConfig::load().unwrap_or_else(|e| {
         eprintln!("Config error: {e}");
